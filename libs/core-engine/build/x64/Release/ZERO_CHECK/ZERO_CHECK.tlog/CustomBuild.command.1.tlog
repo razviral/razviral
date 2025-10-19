@@ -1,0 +1,10 @@
+^C:\USERS\VAIO\APPS\AAA-PROYECTOS-PROPIOS\___RAZVIRAL-CONTAINER\RAZVIRAL\LIBS\CORE-ENGINE\BUILD\CMAKEFILES\23029F9C5CD788BED2A6D1C7909381A8\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\cmake-4.2.0-rc1-windows-x86_64\bin\cmake.exe" -SC:/Users/VAIO/apps/aaa-proyectos-propios/___razviral-container/razviral/libs/core-engine -BC:/Users/VAIO/apps/aaa-proyectos-propios/___razviral-container/razviral/libs/core-engine/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/VAIO/apps/aaa-proyectos-propios/___razviral-container/razviral/libs/core-engine/build/core_engine.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

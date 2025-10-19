@@ -16,6 +16,7 @@ node_modules
 *.launch
 .settings/
 *.sublime-workspace
+vendor/ffmpeg-8.0/
 
 # IDE - VSCode
 .vscode/*

@@ -1,0 +1,126 @@
+# MANIFIESTO SOBERANO DEL CONTRATO: `libs/core-engine/include` (El Diccionario Nativo)
+## VERSIÓN 1.0
+
+### **Directiva Soberana para el Desarrollo**
+
+**SE RECONOCE ESTE DOCUMENTO COMO LA ÚNICA FUENTE DE VERDAD (SSOT) PARA LOS CONTRATOS DE DATOS QUE CRUZAN LA FRONTERA NATIVA (FFI) DEL ECOSISTEMA RAZVIRAL. LA MISIÓN ES CENTRALIZAR, MANTENER Y HACER CUMPLIR EL USO DE LAS ESTRUCTURAS DE DATOS Y ENUMERACIONES DEFINIDAS EN LOS ARCHIVOS DE CABECERA PÚBLICOS DEL `core-engine`. ESTE APARATO ES EL ADN DE LA COMUNICACIÓN ENTRE LA UI DE FLUTTER Y EL MOTOR DE VIDEO NATIVO.**
+
+---
+
+### **1. 🏛️ Filosofía y Principios Raíz**
+
+El propósito de este aparato es ser el **"Diccionario Soberano de la Interfaz Nativa"**. Su función es eliminar la ambigüedad y prevenir la desincronización de la representación de datos entre la capa de Dart (que gestiona la UI y el estado) y la capa de C++ (que realiza el trabajo pesado de procesamiento de video).
+
+*   **Doctrina `C-Header-First`:** La verdad de un contrato de datos no es su clase en Dart, sino su `struct` o `enum` en un archivo de cabecera público de C. **La API pública en C es la SSoT.**
+*   **Reflejo sobre Declaración:** Las clases de Dart que modelan estos datos son un producto derivado del contrato en C, garantizando una sincronización binaria perfecta y sin esfuerzo.
+*   **Centralización Absoluta:** No existirá otra fuente de verdad para los contratos de la FFI en todo el monorepo. Cualquier duplicación o suposición sobre la estructura de datos será considerada una violación arquitectónica.
+*   **Protección de Fronteras:** Este aparato provee las "estructuras de paso" que todo dato debe adoptar al cruzar la frontera FFI (parámetros de una función nativa, datos de retorno, estructuras para callbacks).
+
+---
+
+### **2. 🏗️ Arquitectura y Estructura del Aparato**
+
+*   **Ubicación Canónica de la Verdad:** `libs/core-engine/include/`
+*   **Punto de Entrada Soberano:** `libs/core-engine/include/librazviral_api.h`
+
+#### **Estructura de Archivos:**
+libs/core-engine/include/
+├── librazviral_api.h # Punto de entrada que define la API de funciones y los handles opacos.
+└── razviral_types.h # Definiciones de structs y enums que se usan en la API.
+code
+Code
+### **3. ⚙️ Flujo de Trabajo y Protocolos de Uso**
+
+#### **Protocolo de Creación/Modificación de un Contrato:**
+
+1.  **Definir la Necesidad:** Se identifica la necesidad de pasar datos estructurados entre Dart y C++ (ej. configuración de renderizado, metadatos de un clip).
+2.  **Definir la `struct` o `enum` en C:** En el archivo `razviral_types.h`, se creará la estructura en C. Se usarán tipos de ancho fijo (ej. `int32_t`, `double`) para garantizar la compatibilidad entre arquitecturas.
+
+    **Ejemplo Práctico en `razviral_types.h`:**
+    ```c
+    // // libs/core-engine/include/razviral_types.h
+
+    #ifndef RAZVIRAL_TYPES_H
+    #define RAZVIRAL_TYPES_H
+
+    #include <stdint.h>
+
+    /**
+     * @brief Define la calidad y formato del video de salida.
+     * Este struct se pasa desde Dart a C++ para configurar el renderizador.
+     */
+    typedef struct {
+        int32_t width;
+        int32_t height;
+        int32_t bitrate_kbps;
+        int32_t fps;
+    } RazviralRenderConfig;
+
+    /**
+     * @brief Define los posibles estados del motor de renderizado.
+     * Este enum puede ser devuelto por funciones C++ para informar a Dart.
+     */
+    typedef enum {
+        RAZVIRAL_STATUS_IDLE,
+        RAZVIRAL_STATUS_RENDERING,
+        RAZVIRAL_STATUS_SUCCESS,
+        RAZVIRAL_STATUS_ERROR
+    } RazviralEngineStatus;
+
+    #endif // RAZVIRAL_TYPES_H
+    ```
+3.  **Usar el Contrato en la API:** La API principal en `librazviral_api.h` usará estos nuevos tipos en sus firmas de función.
+4.  **Crear la Clase de Dart Correspondiente:** En la capa de Dart (ej. `apps/mobile/lib/src/core_engine/contracts.dart`), se creará una clase que sea un reflejo 1 a 1 de la `struct` de C.
+
+    **Ejemplo Práctico en `contracts.dart`:**
+    ```dart
+    // // apps/mobile/lib/src/core_engine/contracts.dart
+
+    import 'dart:ffi';
+    import 'package:ffi/ffi.dart';
+
+    // Clase Dart que refleja el struct RazviralRenderConfig de C.
+    // La anotación @Packed(1) o @Packed(4) puede ser necesaria para
+    // asegurar que no haya padding de memoria.
+    final class RazviralRenderConfig extends Struct {
+      @Int32()
+      external int width;
+
+      @Int32()
+      external int height;
+
+      @Int32()
+      external int bitrateKbps;
+
+      @Int32()
+      external int fps;
+    }
+
+    // Enum de Dart que refleja el enum RazviralEngineStatus de C.
+    enum RazviralEngineStatus {
+      idle,
+      rendering,
+      success,
+      error;
+
+      static RazviralEngineStatus fromNative(int value) {
+        // Lógica para convertir el int de C al enum de Dart.
+        return RazviralEngineStatus.values[value];
+      }
+    }
+    ```
+
+#### **Protocolo de Uso en el `core-engine` (C++):**
+
+*   **Firma de Funciones:** Las funciones exportadas en la API usarán punteros a estas `structs` como parámetros (ej. `int razviral_project_render(..., const RazviralRenderConfig* config)`).
+*   **Consistencia Interna:** El código C++ interno **DEBE** usar estos `structs` públicos para cualquier dato que necesite ser expuesto a la capa de Dart.
+
+#### **Protocolo de Uso en la App de Flutter:**
+
+*   **Capa de Abstracción (Repositorio):** Se creará una clase en Dart (ej. `CoreEngineRepository`) que será la única responsable de la comunicación FFI. Esta clase manejará la alocación de memoria para los `Structs` de Dart (`calloc<RazviralRenderConfig>()`), el llenado de sus campos y el paso de sus punteros a C++.
+*   **Modelos de Dominio:** La UI de Flutter **NO** usará directamente las clases `Struct` de la FFI. En su lugar, el `CoreEngineRepository` las mapeará a clases de dominio de Dart limpias (Plain Old Dart Objects), desacoplando completamente la UI de los detalles de la FFI.
+*   **Gestión de Estado (Riverpod):** Los `Providers` de Riverpod que interactúen con el motor nativo consumirán el `CoreEngineRepository` y expondrán los modelos de dominio limpios al resto de la aplicación.
+
+Este aparato es la columna vertebral de la estabilidad y la integridad de la comunicación nativa en `razviral`. Su correcta implementación y uso riguroso son **innegociables**.
+
+---

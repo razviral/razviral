@@ -1,0 +1,94 @@
+# MANIFIESTO SOBERANO DEL MÓDULO DE TELEMETRÍA (Protocolo Sonda)
+## VERSIÓN 1.0
+
+### **Directiva Soberana para el Desarrollo**
+
+**SE RECONOCE ESTE DOCUMENTO COMO LA ÚNICA FUENTE DE VERDAD (SSOT) PARA EL MÓDULO DE TELEMETRÍA Y OBSERVABILIDAD DEL ECOSISTEMA RAZVIRAL. LA MISIÓN ES IMPLEMENTAR, MANTENER Y HACER CUMPLIR LOS PRINCIPIOS Y ESTRUCTURAS AQUÍ DEFINIDOS PARA LOGRAR UNA OBSERVABILIDAD UNIFICADA A TRAVÉS DE LA FRONTERA NATIVA (DART <-> C++).**
+
+---
+
+### **1. 🏛️ Filosofía y Principios Raíz**
+
+El propósito de este módulo es dotar a `razviral` de **Observabilidad de Rendimiento y Uso Hiper-Granular**. No es un simple logger; es el registrador de vuelo que captura cada operación de renderizado y cada interacción del usuario, permitiéndonos diagnosticar fallos, medir cuellos de botella de rendimiento y entender cómo se utiliza la aplicación en el mundo real.
+
+*   **Unificación:** El `logger` **DEBE** poder ser invocado desde Dart y desde C++, y ambos tipos de logs **DEBEN** poder ser correlacionados a través de un `traceId` común.
+*   **Resiliencia (Cliente):** La pérdida de eventos de telemetría es inaceptable. Se implementará una cola persistente en el dispositivo (usando una base de datos local como `sembast` o `Isar`) con reintentos y envío por lotes para garantizar la entrega al backend.
+*   **Alto Rendimiento:** El acto de registrar un evento **NUNCA** debe bloquear el hilo de la UI (en Dart) ni el hilo de renderizado (en C++). Las operaciones son asíncronas y optimizadas.
+*   **Estructura Semántica:** Los eventos son datos estructurados que siguen un contrato inmutable (una clase en Dart). Esto es crucial para permitir el análisis, la creación de dashboards de monitoreo (ej. tiempo promedio de renderizado por modelo de dispositivo) y la configuración de alertas.
+
+---
+
+### **2. 🏗️ Arquitectura y Estructura del Módulo**
+
+*   **Ubicación Canónica (Lógica Principal):** `apps/mobile/lib/src/shared/telemetry/`
+*   **Ubicación Canónica (Contrato FFI):** `libs/core-engine/include/razviral_telemetry.h`
+
+#### **Componentes (Archivos y Responsabilidades):**
+
+1.  **`apps/mobile/lib/src/shared/telemetry/sonda_contracts.dart`**
+    *   **Responsabilidad:** Definir el **Contrato Soberano** de datos de telemetría como clases de Dart inmutables.
+    *   **Contenido:**
+        *   `enum EventStatus { success, failure, inProgress }`
+        *   `enum EventDomain { coreEngine, ui, system }`
+        *   `class SondaEvent`: La estructura completa de un evento, incluyendo `eventId`, `traceId`, `taskId`, `status`, `durationMs`, `domain`, `action`, `payload` (un `Map<String, dynamic>`), etc.
+
+2.  **`apps/mobile/lib/src/shared/telemetry/sonda_emitter.dart`**
+    *   **Responsabilidad:** Contener la lógica principal del `logger` en Dart.
+    *   **Contenido:**
+        *   Una instancia singleton del `Logger`.
+        *   La lógica de la cola, la persistencia en la base de datos local y el envío por lotes al backend.
+        *   Un método `init()` que pasará un puntero de función a C++ para que el código nativo pueda enviar logs de vuelta a Dart.
+
+3.  **`libs/core-engine/include/razviral_telemetry.h`**
+    *   **Responsabilidad:** Definir la interfaz que C++ usará para comunicarse con el sistema de logging de Dart.
+    *   **Contenido:**
+        *   Un `typedef` para el puntero de la función de callback: `typedef void (*log_callback_f)(const char* event_json);`
+        *   Una función `razviral_telemetry_init(log_callback_f callback);` que el `core-engine` usará para almacenar el puntero de la función de Dart.
+
+4.  **`libs/core-engine/src/telemetry/sonda_emitter.cpp`**
+    *   **Responsabilidad:** Proveer una función C++ simple que el resto del `core-engine` pueda llamar.
+    *   **Contenido:**
+        *   Una función `LogToDart(SondaEvent event)` que convierte el evento a una cadena JSON y llama al `callback` si ha sido inicializado.
+
+---
+
+### **3. ⚙️ Flujo de Datos y Funcionamiento**
+
+1.  **Inicialización:** Al arrancar la app de Flutter, se llama a `Logger.init()`. Este método obtiene un puntero a una función estática de Dart (usando `Pointer.fromFunction`) y lo pasa a C++ llamando a `razviral_telemetry_init()`. El `core-engine` ahora sabe cómo "hablar" con Dart.
+2.  **Log desde C++:** Durante el renderizado, el `core-engine` necesita registrar una métrica. Llama a `LogToDart({ domain: "coreEngine", ... })`. Esta función interna formatea un JSON y ejecuta el `callback` almacenado.
+3.  **Log desde Dart:** El usuario presiona un botón. El código de Flutter llama a `logger.info({ domain: "ui", ... })`.
+4.  **Encolamiento:** Tanto los eventos que llegan desde C++ (vía el callback) como los que se originan en Dart se convierten en objetos `SondaEvent` y se añaden a la cola persistente en la base de datos local del dispositivo.
+5.  **Envío:** La cola se vacía y se envía al endpoint `/api/telemetry/ingest` cuando se cumple una de estas condiciones:
+    *   Ha pasado el intervalo de tiempo (ej. 1 minuto).
+    *   Se alcanza el tamaño máximo del lote (ej. 50 eventos).
+    *   La aplicación entra en segundo plano.
+6.  **Resiliencia:** Si el dispositivo no tiene conexión a internet o la llamada a la API de ingesta falla, los eventos permanecen seguros en la base de datos local para el próximo intento, garantizando **cero pérdida de datos**.
+
+---
+
+### **4. 📋 Protocolo de Uso Obligatorio**
+
+1.  **Instrumentación de Procesos Críticos (Core Engine):**
+    *   El proceso de renderizado de video **DEBE** ser el principal usuario.
+    *   Todo el proceso de renderizado **DEBE** estar envuelto en eventos de inicio y fin para medir el tiempo total.
+    *   Fases clave (decodificación de un clip, aplicación de un filtro) **DEBEN** tener sus propios eventos anidados para una medición granular del rendimiento.
+
+2.  **Manejo de Errores (Resiliencia):**
+    *   Todo bloque `catch` en Dart que maneje una excepción de la FFI **DEBE** invocar `logger.error(...)`.
+    *   Toda función en C++ que retorne un código de error **DEBE** generar un evento de log con `status: failure` antes de retornar.
+
+3.  **Interacciones de UI (Flutter):**
+    *   Eventos clave como la selección de medios, la elección de una canción, el inicio del renderizado y el evento de "compartir" **DEBEN** ser registrados con el `logger`.
+
+---
+
+### **5. 🔗 Dependencias Externas al Módulo**
+
+Para que este módulo funcione en su totalidad, el ecosistema `razviral` **DEBE** proveer:
+
+1.  **Un Endpoint de Ingesta en un Backend:** Se necesita un servicio web simple (ej. Cloud Function, Lambda) que reciba los eventos desde la aplicación.
+2.  **Una Base de Datos de Telemetría:** El backend insertará los eventos en una base de datos optimizada para análisis (ej. BigQuery, ClickHouse) para la persistencia a largo plazo y la creación de dashboards.
+3.  **Una Librería de Base de Datos Local en Flutter:** La aplicación de Flutter **DEBE** incluir una dependencia a una base de datos como `sembast`, `Isar` o `Hive` para la cola persistente.
+
+---
+

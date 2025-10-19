@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\VAIO\apps\aaa-proyectos-propios\___razviral-container\razviral\libs\core-engine\build\CMakeFiles\23029f9c5cd788bed2a6d1c7909381a8\generate.stamp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{C283D38F-1A9D-385D-89C4-8EBDEB81E1FA}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

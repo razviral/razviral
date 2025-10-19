@@ -1,0 +1,3 @@
+C:/Users/VAIO/apps/aaa-proyectos-propios/___razviral-container/razviral/libs/core-engine/build/CMakeFiles/core_engine.dir
+C:/Users/VAIO/apps/aaa-proyectos-propios/___razviral-container/razviral/libs/core-engine/build/CMakeFiles/ALL_BUILD.dir
+C:/Users/VAIO/apps/aaa-proyectos-propios/___razviral-container/razviral/libs/core-engine/build/CMakeFiles/ZERO_CHECK.dir

@@ -1,0 +1,102 @@
+# MANIFIESTO DE CREACIÓN DE MÓDULOS v1.0
+## Protocolo de Creación Soberano para el Ecosistema razviral
+
+### **Filosofía Raíz**
+
+Este documento es la **extensión táctica** de nuestros manifiestos de Misión y Contratos. Todo "módulo" (feature de UI en Flutter, funcionalidad del motor C++, contrato de la FFI) nacerá siguiendo estrictamente estos protocolos. La **Visión Hiper-Holística** nos obliga a entender que cada nuevo módulo no solo consiste en archivos, sino en una pieza del ecosistema que debe ser **observable, resiliente y estar en perfecta armonía arquitectónica** desde el primer momento.
+
+**Directiva Imperativa Pre-Creación:** Antes de escribir código, se debe haber sincronizado el contexto con el último `blueprint` del proyecto en `/.docs`.
+
+---
+
+### **Módulo 1: Feature de UI (Componente Aislado de Flutter)**
+
+Para mantener nuestra aplicación Flutter escalable, cada nueva "feature" (ej. la pantalla de edición, la galería de música) se creará en su propio directorio encapsulado, fomentando el bajo acoplamiento.
+
+*   **Ubicación Canónica:** `apps/mobile/lib/src/features/<nombre-feature>/`
+
+#### **Protocolo de Creación Manual:**
+
+1.  **Crear la Estructura de Directorios:**
+    ```
+    apps/mobile/lib/src/features/<nombre-feature>/
+    ├── application/  # Lógica de estado (Providers de Riverpod)
+    ├── domain/       # Modelos de datos limpios (clases Dart)
+    └── presentation/ # Widgets y la pantalla principal de la feature
+    ```
+2.  **Crear el Widget Principal:** Crear el archivo de la pantalla principal en `presentation/`, ej. `<nombre_feature>_screen.dart`.
+
+#### **Protocolo de Integración Obligatoria (Checklist de Calidad)**
+Un módulo de UI NO se considera "entregado" hasta que los siguientes pilares son implementados:
+
+*   **Pilar I (Contratos):**
+    ✅ Los `Providers` y `Widgets` DEBEN importar sus modelos de datos desde la capa de dominio, que a su vez se basan en los contratos de la FFI. Cero tipos `dynamic`.
+*   **Pilar II (Observabilidad):**
+    ✅ Las interacciones clave del usuario (ej. clic en "Renderizar Video") DEBEN ser registradas con el `logger`.
+*   **Pilar VI (Resiliencia):**
+    ✅ Los `Widgets` que dependen de datos asíncronos (usando Riverpod) DEBEN manejar y mostrar explícitamente los estados `AsyncLoading` (con skeletons/spinners), `AsyncError` (con un mensaje de error amigable) y el estado de datos (`AsyncData`), usando el método `.when()`.
+*   **Pilar IV (Internacionalización):**
+    ✅ Cero texto hardcodeado. Todas las cadenas de texto visibles DEBEN ser consumidas desde `AppLocalizations`.
+*   **Pilar V (Theming):**
+    ✅ Cero estilos hardcodeados. Todos los colores, fuentes y espaciados DEBEN usar los tokens de `Theme.of(context)`.
+*   **Pilar IX (Documentación):**
+    ✅ El Widget principal de la pantalla (`<NombreFeature>Screen`) DEBE tener documentación Dartdoc completa.
+
+---
+
+### **Módulo 2: Funcionalidad del Core Engine (Lógica Nativa en C++)**
+
+Para la lógica de procesamiento de video, algoritmos de efectos, o cualquier función reutilizable dentro del motor nativo.
+
+*   **Ubicación Canónica:** `libs/core-engine/src/<nombre-funcionalidad>/`
+
+#### **Protocolo de Creación Manual:**
+
+1.  **Crear Archivos Fuente:** Crear los archivos `.cpp` y `.h` necesarios para la nueva funcionalidad.
+2.  **Actualizar el Build System:** Añadir la nueva ruta de los archivos `.cpp` a la sección `add_library` en el `CMakeLists.txt` para asegurar que se compilen.
+3.  **Exponer en la API (si es necesario):** Si la nueva funcionalidad debe ser accesible desde Flutter, añadir su declaración de función `extern "C"` en `libs/core-engine/include/librazviral_api.h`.
+
+#### **Protocolo de Integración Obligatoria (Checklist de Calidad)**
+
+*   **Pilar I (Contratos):**
+    ✅ Las funciones DEBEN usar los `structs` y `enums` definidos en `razviral_types.h` para sus interfaces públicas.
+*   **Pilar VIII (Higiene de Código):**
+    ✅ Las funciones DEBEN ser puras siempre que sea posible y DEBEN gestionar su memoria correctamente (cero fugas).
+*   **Pilar IX (Documentación):**
+    ✅ Toda función expuesta en un archivo `.h` DEBE tener documentación Doxygen completa.
+*   **Testing Obligatorio:**
+    ✅ La entrega DEBE incluir tests unitarios en C++ (usando un framework como Google Test) o un caso de prueba claro que permita validar la funcionalidad de forma aislada.
+
+---
+
+### **Módulo 3: Interfaz de Contrato Nativo (La Frontera FFI)**
+
+Esta es la capa que conecta el mundo de Dart con el de C++. Es la implementación del "Diccionario Nativo".
+
+*   **Ubicación Canónica:**
+    *   `libs/core-engine/include/` (La Verdad en C)
+    *   `apps/mobile/lib/src/core_engine/` (El Reflejo en Dart)
+
+#### **Protocolo de Creación/Actualización Manual:**
+
+1.  **Definir/Actualizar el Contrato en C:** Añadir o modificar el `struct` o `enum` en `razviral_types.h` y la firma de la función en `librazviral_api.h`.
+2.  **Reflejar el Contrato en Dart:** Crear o modificar la clase `Struct` correspondiente en `contracts.dart`.
+3.  **Implementar el Wrapper en Dart:** En la clase `CoreEngineRepository`, buscar la nueva función nativa usando `DynamicLibrary.lookup` y crear un método de Dart fuertemente tipado que la envuelva, manejando la conversión de tipos y la gestión de punteros.
+
+#### **Protocolo de Integración Obligatoria (Checklist de Calidad)**
+
+*   **Pilar I (Contratos):**
+    ✅ La clase `Struct` de Dart DEBE ser un espejo binario exacto del `struct` de C.
+*   **Pilar II (Observabilidad):**
+    ✅ Cada llamada FFI en el `CoreEngineRepository` DEBE estar envuelta en un `trace` del `logger` para medir la latencia de la invocación nativa.
+*   **Pilar VI (Resiliencia):**
+    ✅ Toda llamada a una función nativa desde Dart DEBE estar envuelta en un bloque `try/catch`.
+    ✅ La función en C++ DEBE retornar un código de error en lugar de crashear o lanzar una excepción de C++. El wrapper de Dart DEBE interpretar este código y lanzar una Excepción de Dart apropiada.
+*   **Pilar IX (Documentación):**
+    ✅ Cada `struct` en C, función en la API C, y método wrapper en Dart DEBE tener JSDoc/Doxygen/Dartdoc explicando su propósito, parámetros y retorno.
+
+Este manifiesto establece un estándar de excelencia y disciplina. Cada `git commit` es un testimonio de nuestra adherencia a estos principios. No hay atajos para construir un motor de alto rendimiento.
+
+---
+
+

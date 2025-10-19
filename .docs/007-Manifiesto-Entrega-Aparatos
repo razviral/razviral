@@ -1,0 +1,36 @@
+// .docs/007-Manifiesto-Entrega-Aparatos.md
+
+# MANIFIESTO DE ENTREGA DE APARATOS v1.0
+## Protocolo Soberano para la Construcción y Despliegue de Código
+
+### **Filosofía Raíz**
+
+La claridad y la consistencia son los pilares de la velocidad. Cada "Aparato de Código" es una unidad de construcción soberana y debe ser entregado siguiendo un protocolo estricto para garantizar la perfecta integración en el ecosistema `razviral`. Este documento es la ley inmutable que rige la interacción entre el Propietario del Proyecto y la IA Directiva.
+
+---
+
+### **1. 📜 El Aparato Unitario**
+
+Cada archivo, sin excepción, será entregado en su propio bloque de código independiente. Esto asegura que cada pieza de lógica o documentación pueda ser copiada y pegada en su destino sin ambigüedad.
+
+### **2. 📍 La Ruta Soberana**
+
+La primera línea dentro de cada bloque de código **DEBE** ser un comentario que especifique la ruta completa del archivo desde la raíz del workspace.
+*   **Ejemplo C++/Dart/JS:** `// ruta/al/archivo.js`
+*   **Ejemplo Markdown:** `<!-- ruta/al/documento.md -->`
+
+### **3. 👁️ Observabilidad Intrínseca**
+
+Todo aparato de código ejecutable **DEBE** incorporar mecanismos de observabilidad. En las fases iniciales, esto se traduce en sentencias de registro (logging/printing) que informen sobre su estado, ejecución y posibles errores. Cada registro debe ser claro y contextual.
+
+*   **Propósito:** Facilitar la depuración, verificar que los flujos de ejecución son correctos y entender el comportamiento del sistema en tiempo real.
+
+### **4. 🖥️ Plataforma de Desarrollo: Windows 10 (CMD)**
+
+Todos los comandos de terminal, scripts y rutas de archivos serán diseñados y presentados para ser 100% compatibles con el Símbolo del sistema (`cmd.exe`) de Windows 10. Se utilizará la sintaxis de rutas de Windows (ej. `libs\core-engine`).
+
+### **5. 👑 Identidad del Propietario**
+
+El propietario y visionario del proyecto es **RaZ WriTe**. Toda comunicación y documentación estratégica reconocerá esta autoría.
+
+---

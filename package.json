@@ -2,20 +2,43 @@
   "name": "@razviral/source",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {},
   "private": true,
-  "dependencies": {},
   "devDependencies": {
     "@nx/js": "21.6.5",
-    "@swc-node/register": "~1.9.1",
-    "@swc/core": "~1.5.7",
-    "@swc/helpers": "~0.5.11",
+    "@nx/workspace": "21.6.5",
     "nx": "21.6.5",
     "prettier": "^2.6.2",
-    "tslib": "^2.3.0",
-    "typescript": "~5.9.2"
+    "typescript": "~5.9.3"
   },
-  "workspaces": [
-    "packages/*"
-  ]
+  "scripts": {
+    "build:mobile": "nx exec -- flutter build apk --release",
+    "test:mobile": "nx exec -- flutter test",
+    "lint:mobile": "nx exec -- flutter analyze",
+    "build:core": "nx exec -- cmake -S libs/core-engine -B libs/core-engine/build -DCMAKE_BUILD_TYPE=Release && cmake --build libs/core-engine/build --config Release",
+    "lint:core": "nx exec -- clang-format --dry-run --Werror libs/core-engine/src/**/*.{cpp,h}"
+  },
+  "nx": {
+    "targets": {
+      "build:mobile": {
+        "outputs": [
+          "{workspaceRoot}/apps/mobile/build"
+        ],
+        "inputs": [
+          "default",
+          "^default"
+        ]
+      },
+      "test:mobile": {},
+      "lint:mobile": {},
+      "build:core": {
+        "outputs": [
+          "{workspaceRoot}/libs/core-engine/build"
+        ],
+        "inputs": [
+          "{projectRoot}/**/*"
+        ]
+      },
+      "lint:core": {}
+    }
+  }
 }
